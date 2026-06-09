@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { SessionConfig } from "../types";
 import { pickCommand, randomIntervalSeconds } from "../lib/random";
 import { cancelSpeech, speak } from "../lib/speech";
@@ -21,6 +21,7 @@ export default function Session({ config, initialCommand, onStop }: Props) {
   const [current, setCurrent] = useState(initialCommand);
   const [isPaused, setIsPaused] = useState(false);
   const [, force] = useState(0);
+  const commandRef = useRef<HTMLDivElement>(null);
 
   const elapsedBeforePauseRef = useRef(0);
   const resumedAtRef = useRef<number | null>(Date.now());
@@ -70,6 +71,20 @@ export default function Session({ config, initialCommand, onStop }: Props) {
     return () => window.clearInterval(id);
   }, []);
 
+  // Shrink command font-size so the longest word always fits on one line.
+  useLayoutEffect(() => {
+    const el = commandRef.current;
+    const parent = el?.parentElement;
+    if (!el || !parent) return;
+    el.style.fontSize = "";
+    const available = parent.clientWidth;
+    let fontSize = parseFloat(getComputedStyle(el).fontSize);
+    while (el.scrollWidth > available && fontSize > 16) {
+      fontSize -= 2;
+      el.style.fontSize = `${fontSize}px`;
+    }
+  }, [current]);
+
   function elapsedMs(): number {
     const live = resumedAtRef.current === null ? 0 : Date.now() - resumedAtRef.current;
     return elapsedBeforePauseRef.current + live;
@@ -110,21 +125,30 @@ export default function Session({ config, initialCommand, onStop }: Props) {
 
   return (
     <div className="session">
-      <div className="clock" aria-label="Elapsed time">
-        {formatElapsed(elapsedMs())}
-      </div>
-      <div className={`command ${isPaused ? "paused" : ""}`} aria-live="polite">
+      <div
+        ref={commandRef}
+        className={`command ${isPaused ? "paused" : ""}`}
+        aria-live="polite"
+      >
         {current}
       </div>
       <div className="controls">
         {isPaused ? (
-          <button type="button" className="primary" onClick={handleResume}>
+          <button type="button" className="resume" onClick={handleResume}>
             Resume
           </button>
         ) : (
-          <button type="button" onClick={handlePause}>Pause</button>
+          <button type="button" className="pause" onClick={handlePause}>
+            Pause
+          </button>
         )}
-        <button type="button" onClick={handleStop}>Stop</button>
+        <button type="button" className="stop" onClick={handleStop}>
+          Stop
+        </button>
+      </div>
+      <div className="clock" aria-label="Elapsed time">
+        <span className="clock-label">Elapsed</span>
+        <span className="clock-value">{formatElapsed(elapsedMs())}</span>
       </div>
     </div>
   );

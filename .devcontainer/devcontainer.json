@@ -1,6 +1,9 @@
 {
   "name": "frisbee-app",
-  "image": "mcr.microsoft.com/devcontainers/typescript-node:20",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/frisbee-app",
+  "remoteUser": "node",
   "forwardPorts": [5173],
   "portsAttributes": {
     "5173": {
@@ -8,13 +11,8 @@
       "onAutoForward": "openBrowser"
     }
   },
-  "mounts": [
-    "source=${localEnv:HOME}/.1password/agent.sock,target=/tmp/1password-agent.sock,type=bind"
-  ],
-  "remoteEnv": {
-    "SSH_AUTH_SOCK": "/tmp/1password-agent.sock"
-  },
   "postCreateCommand": "npm install && mkdir -p ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null",
+  "postStartCommand": "bash .devcontainer/post-start.sh",
   "customizations": {
     "vscode": {
       "extensions": [

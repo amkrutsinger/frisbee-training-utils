@@ -2,6 +2,11 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 html,
 body,
 #root {
@@ -12,6 +17,13 @@ body,
   font-size: 18px;
   color: #111;
   background: #fff;
+}
+
+body {
+  /* Kill the default gray tap-highlight rectangle on iOS. */
+  -webkit-tap-highlight-color: transparent;
+  /* Disable rubber-band overscroll so the app feels app-like, not web-like. */
+  overscroll-behavior: none;
 }
 
 .app {
@@ -93,6 +105,15 @@ button {
   border-radius: 4px;
   background: #fff;
   cursor: pointer;
+  /* iOS: disable double-tap-to-zoom + text selection on buttons. */
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: transform 0.08s ease;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 button:disabled {
@@ -104,6 +125,24 @@ button.primary {
   background: #111;
   color: #fff;
   border-color: #111;
+}
+
+button.pause {
+  background: #f59e0b;
+  color: #1a1a1a;
+  border-color: #d97706;
+}
+
+button.resume {
+  background: #10b981;
+  color: #fff;
+  border-color: #059669;
+}
+
+button.stop {
+  background: #ef4444;
+  color: #fff;
+  border-color: #dc2626;
 }
 
 /* Session */
@@ -118,16 +157,34 @@ button.primary {
 }
 
 .clock {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.5rem;
+  color: #666;
+}
+
+.clock-label {
+  font-size: 0.8rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.clock-value {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   font-variant-numeric: tabular-nums;
-  font-size: 2.5rem;
-  color: #555;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
 .command {
   font-size: clamp(4rem, 22vw, 8rem);
   font-weight: 700;
   line-height: 1.1;
-  word-break: break-word;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .command.paused {
@@ -142,4 +199,20 @@ button.primary {
 
 .controls button {
   flex: 1;
+  /* Ensure both buttons stay tap-friendly even at iPhone-SE width. */
+  min-width: 0;
+}
+
+/* Narrow-phone tweaks (iPhone SE ≈ 375px). */
+@media (max-width: 400px) {
+  .app {
+    padding: max(0.75rem, env(safe-area-inset-top)) 0.75rem
+      max(0.75rem, env(safe-area-inset-bottom));
+  }
+  h1 {
+    font-size: 1.8rem;
+  }
+  .command {
+    font-size: clamp(3rem, 20vw, 7rem);
+  }
 }
