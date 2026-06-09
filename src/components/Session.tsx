@@ -22,11 +22,9 @@ export default function Session({ config, initialCommand, onStop }: Props) {
   const [isPaused, setIsPaused] = useState(false);
   const [, force] = useState(0);
 
-  // Stopwatch state: accumulated ms across run segments + current segment start.
   const elapsedBeforePauseRef = useRef(0);
   const resumedAtRef = useRef<number | null>(Date.now());
 
-  // Cycling-timeout state: when current command was started and how long it lasts.
   const timeoutRef = useRef<number | null>(null);
   const segmentStartRef = useRef<number>(Date.now());
   const segmentMsRef = useRef<number>(0);
@@ -48,16 +46,16 @@ export default function Session({ config, initialCommand, onStop }: Props) {
       prevCommandRef.current = next;
       setCurrent(next);
       speak(next);
-      const nextMs = randomIntervalSeconds(config.minSeconds, config.maxSeconds) * 1000;
+      const nextMs =
+        randomIntervalSeconds(config.minSeconds, config.maxSeconds) * 1000;
       scheduleNext(nextMs);
     }, ms);
   }
 
-  // Kick off the first cycle on mount (the initial command was already spoken
-  // from the Go-button click handler to satisfy iOS audio unlock).
   useEffect(() => {
     requestWakeLock();
-    const firstMs = randomIntervalSeconds(config.minSeconds, config.maxSeconds) * 1000;
+    const firstMs =
+      randomIntervalSeconds(config.minSeconds, config.maxSeconds) * 1000;
     scheduleNext(firstMs);
     return () => {
       if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
@@ -67,7 +65,6 @@ export default function Session({ config, initialCommand, onStop }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Stopwatch tick: re-render 4×/sec.
   useEffect(() => {
     const id = window.setInterval(() => force((n) => n + 1), 250);
     return () => window.clearInterval(id);
@@ -80,12 +77,10 @@ export default function Session({ config, initialCommand, onStop }: Props) {
 
   function handlePause() {
     if (isPaused) return;
-    // Freeze stopwatch.
     if (resumedAtRef.current !== null) {
       elapsedBeforePauseRef.current += Date.now() - resumedAtRef.current;
       resumedAtRef.current = null;
     }
-    // Freeze command cycling: capture remaining ms on current segment.
     if (timeoutRef.current !== null) {
       window.clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
@@ -99,7 +94,7 @@ export default function Session({ config, initialCommand, onStop }: Props) {
   function handleResume() {
     if (!isPaused) return;
     resumedAtRef.current = Date.now();
-    speak(current); // Re-announce current command (iOS-friendly: cancel+speak).
+    speak(current);
     const remaining = remainingMsRef.current ?? 0;
     remainingMsRef.current = null;
     scheduleNext(remaining);
@@ -127,13 +122,9 @@ export default function Session({ config, initialCommand, onStop }: Props) {
             Resume
           </button>
         ) : (
-          <button type="button" onClick={handlePause}>
-            Pause
-          </button>
+          <button type="button" onClick={handlePause}>Pause</button>
         )}
-        <button type="button" className="danger" onClick={handleStop}>
-          Stop
-        </button>
+        <button type="button" onClick={handleStop}>Stop</button>
       </div>
     </div>
   );

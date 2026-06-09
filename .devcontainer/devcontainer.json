@@ -8,7 +8,13 @@
       "onAutoForward": "openBrowser"
     }
   },
-  "postCreateCommand": "npm install",
+  "mounts": [
+    "source=${localEnv:HOME}/.1password/agent.sock,target=/tmp/1password-agent.sock,type=bind"
+  ],
+  "remoteEnv": {
+    "SSH_AUTH_SOCK": "/tmp/1password-agent.sock"
+  },
+  "postCreateCommand": "npm install && mkdir -p ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null",
   "customizations": {
     "vscode": {
       "extensions": [

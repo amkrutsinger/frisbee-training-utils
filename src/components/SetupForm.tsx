@@ -14,9 +14,12 @@ function parseCommands(raw: string): string[] {
 
 export default function SetupForm({ onStart }: Props) {
   const [raw, setRaw] = useState("forehand, backhand, hammer, scoober");
-  const [minSeconds, setMinSeconds] = useState(3);
-  const [maxSeconds, setMaxSeconds] = useState(7);
+  const [minRaw, setMinRaw] = useState("3");
+  const [maxRaw, setMaxRaw] = useState("7");
   const [avoidRepeats, setAvoidRepeats] = useState(false);
+
+  const minSeconds = Number(minRaw);
+  const maxSeconds = Number(maxRaw);
 
   const commands = useMemo(() => parseCommands(raw), [raw]);
 
@@ -25,8 +28,10 @@ export default function SetupForm({ onStart }: Props) {
 
   const errors: string[] = [];
   if (commands.length === 0) errors.push("Add at least one command.");
-  if (minSeconds <= 0) errors.push("Min seconds must be greater than 0.");
-  if (maxSeconds < minSeconds) errors.push("Max must be ≥ min.");
+  if (!Number.isFinite(minSeconds) || minSeconds <= 0)
+    errors.push("Min seconds must be greater than 0.");
+  if (!Number.isFinite(maxSeconds) || maxSeconds < minSeconds)
+    errors.push("Max must be ≥ min.");
 
   const canStart = errors.length === 0;
 
@@ -45,49 +50,43 @@ export default function SetupForm({ onStart }: Props) {
     <form className="setup" onSubmit={handleSubmit}>
       <h1>Training Wheel</h1>
 
-      <label className="field">
-        <span>Commands (comma-separated)</span>
+      <label>
+        Commands (comma-separated)
         <textarea
           value={raw}
           onChange={(e) => setRaw(e.target.value)}
-          rows={3}
-          placeholder="forehand, backhand, hammer"
+          rows={2}
           autoCapitalize="none"
           autoCorrect="off"
+          spellCheck={false}
         />
       </label>
 
       {commands.length > 0 && (
-        <div className="chips" aria-label="Parsed commands">
-          {commands.map((c, i) => (
-            <span key={`${c}-${i}`} className="chip">
-              {c}
-            </span>
-          ))}
-        </div>
+        <div className="chips">{commands.length} command{commands.length === 1 ? "" : "s"}</div>
       )}
 
       <div className="row">
-        <label className="field">
-          <span>Min seconds</span>
+        <label>
+          Min seconds
           <input
             type="number"
             inputMode="decimal"
             min={0.5}
             step={0.5}
-            value={minSeconds}
-            onChange={(e) => setMinSeconds(Number(e.target.value))}
+            value={minRaw}
+            onChange={(e) => setMinRaw(e.target.value)}
           />
         </label>
-        <label className="field">
-          <span>Max seconds</span>
+        <label>
+          Max seconds
           <input
             type="number"
             inputMode="decimal"
             min={0.5}
             step={0.5}
-            value={maxSeconds}
-            onChange={(e) => setMaxSeconds(Number(e.target.value))}
+            value={maxRaw}
+            onChange={(e) => setMaxRaw(e.target.value)}
           />
         </label>
       </div>
@@ -99,10 +98,7 @@ export default function SetupForm({ onStart }: Props) {
           disabled={!canAvoidRepeats}
           onChange={(e) => setAvoidRepeats(e.target.checked)}
         />
-        <span>
-          Avoid immediate repeats
-          {!canAvoidRepeats && <em> (needs 2+ commands)</em>}
-        </span>
+        Avoid immediate repeats
       </label>
 
       {errors.length > 0 && (
