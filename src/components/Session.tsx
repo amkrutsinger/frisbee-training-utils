@@ -17,6 +17,15 @@ function formatElapsed(ms: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+// Stops that *we* inject (after a Sprint, or after a forced repeat) are tagged
+// here so we can tell them apart from a "stop" the user typed into their list.
+// Identity-based, so it keys off origin rather than the string "stop".
+const forcedStops = new WeakSet<Command>();
+
+function isForcedStop(c: Command | null): boolean {
+  return c !== null && forcedStops.has(c);
+}
+
 export default function Session({ config, initialCommand, onStop }: Props) {
   const [current, setCurrent] = useState<Command>(initialCommand);
   const [upcoming, setUpcoming] = useState<Command | null>(null);
@@ -35,54 +44,101 @@ export default function Session({ config, initialCommand, onStop }: Props) {
   // The pre-picked next command, mirrored in `upcoming` state for the preview.
   // We commit to it: it is exactly what fires when this segment ends or is skipped.
   const upcomingRef = useRef<Command | null>(null);
+  // When `upcomingRef` is a *forced* Stop, this holds the command committed to
+  // fire after it — what the preview shows in the Stop's place, and what
+  // actually fires when the Stop ends (kept in sync so the preview never lies).
+  const afterStopRef = useRef<Command | null>(null);
 
   // Tracks when each command last fired, used by the maxGapMinutes constraint.
   // Seeded in the mount effect with the initial command + session start time.
   const sessionStartRef = useRef<number>(Date.now());
   const lastFiredRef = useRef<LastFiredMap>({});
 
-  // A "Stop" always follows a "Sprint". Reuse a configured Stop command if the
-  // user has one; otherwise synthesize a brief transient one (it never needs to
-  // appear in the setup UI).
-  function stopCommand(): Command {
+  // A forced Stop: a brief transient command, reusing the user's own "stop"
+  // duration if they listed one. Always a fresh object so it can be tagged in
+  // `forcedStops` without affecting the user's command (if any).
+  function forcedStop(): Command {
     const existing = config.commands.find(
       (c) => c.name.trim().toLowerCase() === "stop",
     );
-    return existing ?? { name: "stop", minSeconds: 0.8, maxSeconds: 0.8 };
+    const cmd: Command = existing
+      ? { ...existing }
+      : { name: "stop", minSeconds: 0.9, maxSeconds: 0.9 };
+    forcedStops.add(cmd);
+    return cmd;
   }
 
   // Decides what comes after `prev`, as of the moment it will fire (`atMs`).
-  // Hard rule: whatever follows a "Sprint" (any casing) is always a "Stop".
+  // A "Stop" is forced when (1) prev is a "Sprint", or (2) repeats are allowed
+  // and the picker lands on the same command again. A forced "Stop" never
+  // follows a "Stop" — back-to-back stops only happen if the user lists "stop".
   function pickAfter(prev: Command, atMs: number): Command {
-    if (prev.name.trim().toLowerCase() === "sprint") return stopCommand();
-    return pickCommand(config.commands, prev, config.avoidRepeats, {
+    const prevName = prev.name.trim().toLowerCase();
+    if (prevName === "sprint") return forcedStop();
+    const next = pickCommand(config.commands, prev, config.avoidRepeats, {
       lastFired: lastFiredRef.current,
       sessionStart: sessionStartRef.current,
       now: atMs,
     });
+    if (!config.avoidRepeats && prevName !== "stop" && next.name === prev.name) {
+      return forcedStop();
+    }
+    return next;
+  }
+
+  // Commits the command that fires after `next` (which starts at `now` and
+  // lasts `ms`) and mirrors the preview. When that command is a forced Stop,
+  // also commits the move after the Stop so the preview skips past the Stop and
+  // shows a real command — and that exact command fires when the Stop ends.
+  function commitAfter(next: Command, now: number, ms: number) {
+    const following = pickAfter(next, now + ms);
+    upcomingRef.current = following;
+    if (isForcedStop(following)) {
+      const afterStop = pickAfter(following, now + ms + durationMsFor(following));
+      afterStopRef.current = afterStop;
+      setUpcoming(afterStop);
+    } else {
+      afterStopRef.current = null;
+      setUpcoming(following);
+    }
   }
 
   // Promotes `next` to current, announces it, then pre-picks the following
-  // command for the preview and schedules the segment.
-  function advanceTo(next: Command) {
+  // command for the preview and schedules the segment. `committedFollowing`,
+  // when given, is used verbatim instead of re-picking — this is the move
+  // already shown in the preview while a forced Stop was on screen, so it must
+  // fire exactly as previewed.
+  function advanceTo(next: Command, committedFollowing?: Command) {
     const now = Date.now();
     lastFiredRef.current = { ...lastFiredRef.current, [next.name]: now };
     prevCommandRef.current = next;
     setCurrent(next);
     speak(next.name);
 
-    // Pick the following command for the time this new segment will end, so the
-    // maxGap guarantee is evaluated against the moment it actually fires.
     const ms = durationMsFor(next);
-    const following = pickAfter(next, now + ms);
-    upcomingRef.current = following;
-    setUpcoming(following);
+    if (committedFollowing !== undefined) {
+      upcomingRef.current = committedFollowing;
+      afterStopRef.current = null;
+      setUpcoming(committedFollowing);
+    } else {
+      // Pick the following command for the time this segment will end, so the
+      // maxGap guarantee is evaluated against the moment it actually fires.
+      commitAfter(next, now, ms);
+    }
     scheduleNext(ms);
   }
 
   // Promotes the pre-picked command. Shared by the interval timer and Skip.
+  // When the committed next is a forced Stop, hand the already-committed
+  // post-Stop move through so it fires exactly as the preview promised.
   function fireNext() {
-    advanceTo(upcomingRef.current ?? pickAfter(prevCommandRef.current, Date.now()));
+    const next =
+      upcomingRef.current ?? pickAfter(prevCommandRef.current, Date.now());
+    if (isForcedStop(next) && afterStopRef.current) {
+      advanceTo(next, afterStopRef.current);
+    } else {
+      advanceTo(next);
+    }
   }
 
   function scheduleNext(ms: number) {
@@ -99,15 +155,10 @@ export default function Session({ config, initialCommand, onStop }: Props) {
     cancelSpeech();
     const cur = prevCommandRef.current;
     // Skipping a "Sprint" also skips the "Stop" it would otherwise force — the
-    // user is bailing on the whole sprint, so jump straight to a normal command.
-    if (cur.name.trim().toLowerCase() === "sprint") {
-      advanceTo(
-        pickCommand(config.commands, cur, config.avoidRepeats, {
-          lastFired: lastFiredRef.current,
-          sessionStart: sessionStartRef.current,
-          now: Date.now(),
-        })
-      );
+    // user is bailing on the whole sprint, so jump straight to the move the
+    // preview was already showing (committed past the Stop).
+    if (cur.name.trim().toLowerCase() === "sprint" && afterStopRef.current) {
+      advanceTo(afterStopRef.current);
     } else {
       fireNext();
     }
@@ -119,9 +170,7 @@ export default function Session({ config, initialCommand, onStop }: Props) {
     sessionStartRef.current = start;
     lastFiredRef.current = { [initialCommand.name]: start };
     const ms = durationMsFor(initialCommand);
-    const following = pickAfter(initialCommand, start + ms);
-    upcomingRef.current = following;
-    setUpcoming(following);
+    commitAfter(initialCommand, start, ms);
     scheduleNext(ms);
     return () => {
       if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
@@ -203,14 +252,12 @@ export default function Session({ config, initialCommand, onStop }: Props) {
       >
         {current.name}
       </div>
-      {!config.hideNextExercise &&
-        upcoming &&
-        upcoming.name.trim().toLowerCase() !== "stop" && (
-          <div className="next-up">
-            <span className="next-up-label">Up next</span>
-            <span className="next-up-value">{upcoming.name}</span>
-          </div>
-        )}
+      {!config.hideNextExercise && upcoming && (
+        <div className="next-up">
+          <span className="next-up-label">Up next</span>
+          <span className="next-up-value">{upcoming.name}</span>
+        </div>
+      )}
       <div className="controls">
         <button
           type="button"
