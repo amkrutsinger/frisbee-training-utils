@@ -1,12 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { SessionConfig } from "../types";
-import { pickCommand, randomIntervalSeconds } from "../lib/random";
+import type { Command, SessionConfig } from "../types";
+import { durationMsFor, pickCommand, type LastFiredMap } from "../lib/random";
 import { cancelSpeech, speak } from "../lib/speech";
 import { releaseWakeLock, requestWakeLock } from "../lib/wakeLock";
 
 type Props = {
   config: SessionConfig;
-  initialCommand: string;
+  initialCommand: Command;
   onStop: () => void;
 };
 
@@ -18,7 +18,7 @@ function formatElapsed(ms: number): string {
 }
 
 export default function Session({ config, initialCommand, onStop }: Props) {
-  const [current, setCurrent] = useState(initialCommand);
+  const [current, setCurrent] = useState<Command>(initialCommand);
   const [isPaused, setIsPaused] = useState(false);
   const [, force] = useState(0);
   const commandRef = useRef<HTMLDivElement>(null);
@@ -30,7 +30,12 @@ export default function Session({ config, initialCommand, onStop }: Props) {
   const segmentStartRef = useRef<number>(Date.now());
   const segmentMsRef = useRef<number>(0);
   const remainingMsRef = useRef<number | null>(null);
-  const prevCommandRef = useRef<string>(initialCommand);
+  const prevCommandRef = useRef<Command>(initialCommand);
+
+  // Tracks when each command last fired, used by the maxGapMinutes constraint.
+  // Seeded in the mount effect with the initial command + session start time.
+  const sessionStartRef = useRef<number>(Date.now());
+  const lastFiredRef = useRef<LastFiredMap>({});
 
   function scheduleNext(ms: number) {
     if (timeoutRef.current !== null) {
@@ -39,25 +44,31 @@ export default function Session({ config, initialCommand, onStop }: Props) {
     segmentStartRef.current = Date.now();
     segmentMsRef.current = ms;
     timeoutRef.current = window.setTimeout(() => {
+      const now = Date.now();
       const next = pickCommand(
         config.commands,
         prevCommandRef.current,
-        config.avoidRepeats
+        config.avoidRepeats,
+        {
+          lastFired: lastFiredRef.current,
+          sessionStart: sessionStartRef.current,
+          now,
+        }
       );
+      lastFiredRef.current = { ...lastFiredRef.current, [next.name]: now };
       prevCommandRef.current = next;
       setCurrent(next);
-      speak(next);
-      const nextMs =
-        randomIntervalSeconds(config.minSeconds, config.maxSeconds) * 1000;
-      scheduleNext(nextMs);
+      speak(next.name);
+      scheduleNext(durationMsFor(next));
     }, ms);
   }
 
   useEffect(() => {
     requestWakeLock();
-    const firstMs =
-      randomIntervalSeconds(config.minSeconds, config.maxSeconds) * 1000;
-    scheduleNext(firstMs);
+    const start = Date.now();
+    sessionStartRef.current = start;
+    lastFiredRef.current = { [initialCommand.name]: start };
+    scheduleNext(durationMsFor(initialCommand));
     return () => {
       if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
       cancelSpeech();
@@ -71,7 +82,6 @@ export default function Session({ config, initialCommand, onStop }: Props) {
     return () => window.clearInterval(id);
   }, []);
 
-  // Shrink command font-size so the longest word always fits on one line.
   useLayoutEffect(() => {
     const el = commandRef.current;
     const parent = el?.parentElement;
@@ -109,7 +119,7 @@ export default function Session({ config, initialCommand, onStop }: Props) {
   function handleResume() {
     if (!isPaused) return;
     resumedAtRef.current = Date.now();
-    speak(current);
+    speak(current.name);
     const remaining = remainingMsRef.current ?? 0;
     remainingMsRef.current = null;
     scheduleNext(remaining);
@@ -130,7 +140,7 @@ export default function Session({ config, initialCommand, onStop }: Props) {
         className={`command ${isPaused ? "paused" : ""}`}
         aria-live="polite"
       >
-        {current}
+        {current.name}
       </div>
       <div className="controls">
         {isPaused ? (

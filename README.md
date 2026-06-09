@@ -1,4 +1,4 @@
-# Training Wheel
+# Rep Randomizer
 
 Tiny React app that calls out random commands from a list at random intervals — for solo drill practice.
 

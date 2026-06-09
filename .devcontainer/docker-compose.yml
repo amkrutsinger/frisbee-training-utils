@@ -1,0 +1,43 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # Project source — matches devcontainer.json's workspaceFolder.
+    volumes:
+      - ..:/workspaces/frisbee-app:cached
+
+      # === SSH AGENT SOCKET FORWARDING ===
+      #
+      # Bind-mount the host's 1Password SSH agent Unix-domain socket into the
+      # container at the SAME PATH the host uses. Mirroring the path means any
+      # config that references the socket (e.g. an IdentityAgent line in
+      # ~/.ssh/config) stays portable between host and container.
+      #
+      # Socket forwarding (this) vs key forwarding:
+      #   - Socket forwarding: we expose the agent's UDS to the container.
+      #     Signing requests cross the boundary; private keys stay in
+      #     1Password's vault on the host. 1Password still gates each
+      #     signing request behind biometric / system unlock.
+      #   - Key forwarding (`ssh -A`): forwards the agent end-to-end to a
+      #     remote host. Anything running with your UID on that remote can
+      #     hijack signing for the duration of the session. Much wider blast
+      #     radius. We deliberately do NOT use this.
+      - ${HOME}/.1password/agent.sock:/home/node/.1password/agent.sock
+
+    environment:
+      # Canonical OpenSSH discovery variable — ssh / git / ssh-add read it
+      # with no per-tool config. This handles the primary `node` user.
+      #
+      # We do not rely on this for `the-robot`: when VS Code's Remote
+      # extensions attach to the container they unconditionally overwrite
+      # SSH_AUTH_SOCK with their own forwarding socket at
+      # /tmp/vscode-ssh-auth-<uuid>.sock, where the UUID rotates on every
+      # reconnect. Anything pinned to the env var breaks on reload. See
+      # post-start.sh for the-robot's static IdentityAgent setup.
+      SSH_AUTH_SOCK: /home/node/.1password/agent.sock
+
+    user: node
+    working_dir: /workspaces/frisbee-app
+    command: sleep infinity
+    init: true

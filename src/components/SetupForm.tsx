@@ -1,105 +1,165 @@
-import { useMemo, useState } from "react";
-import type { SessionConfig } from "../types";
+import type { FormData } from "../App";
+import type { Command, SessionConfig } from "../types";
 
 type Props = {
-  onStart: (config: SessionConfig) => void;
+  form: FormData;
+  onChange: (next: FormData) => void;
+  onReview: (config: SessionConfig) => void;
 };
 
-function parseCommands(raw: string): string[] {
+function parseCsv(raw: string): string[] {
   return raw
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
 }
 
-export default function SetupForm({ onStart }: Props) {
-  const [raw, setRaw] = useState("forehand, backhand, hammer, scoober");
-  const [minRaw, setMinRaw] = useState("3");
-  const [maxRaw, setMaxRaw] = useState("7");
-  const [avoidRepeats, setAvoidRepeats] = useState(false);
-
-  const minSeconds = Number(minRaw);
-  const maxSeconds = Number(maxRaw);
-
-  const commands = useMemo(() => parseCommands(raw), [raw]);
-
-  const canAvoidRepeats = commands.length >= 2;
-  const effectiveAvoidRepeats = avoidRepeats && canAvoidRepeats;
-
+export function buildConfig(form: FormData): {
+  config: SessionConfig | null;
+  errors: string[];
+} {
   const errors: string[] = [];
-  if (commands.length === 0) errors.push("Add at least one command.");
-  if (!Number.isFinite(minSeconds) || minSeconds <= 0)
-    errors.push("Min seconds must be greater than 0.");
-  if (!Number.isFinite(maxSeconds) || maxSeconds < minSeconds)
-    errors.push("Max must be ≥ min.");
 
-  const canStart = errors.length === 0;
+  const commandNames = parseCsv(form.commandsRaw);
+  const oneOffNames = parseCsv(form.oneOffsRaw);
+
+  const min = Number(form.defaultMinRaw);
+  const max = Number(form.defaultMaxRaw);
+  const oneOff = Number(form.defaultOneOffRaw);
+
+  if (commandNames.length === 0 && oneOffNames.length === 0) {
+    errors.push("Add at least one command or one-off.");
+  }
+  if (commandNames.length > 0) {
+    if (!Number.isFinite(min) || min <= 0)
+      errors.push("Default min seconds must be > 0.");
+    if (!Number.isFinite(max) || max < min)
+      errors.push("Default max must be ≥ min.");
+  }
+  if (oneOffNames.length > 0) {
+    if (!Number.isFinite(oneOff) || oneOff <= 0)
+      errors.push("One-off duration must be > 0.");
+  }
+
+  if (errors.length > 0) return { config: null, errors };
+
+  const commands: Command[] = [
+    ...commandNames.map(
+      (name): Command => ({ name, minSeconds: min, maxSeconds: max })
+    ),
+    ...oneOffNames.map(
+      (name): Command => ({
+        name,
+        minSeconds: oneOff,
+        maxSeconds: oneOff,
+      })
+    ),
+  ];
+
+  return {
+    config: { commands, avoidRepeats: form.avoidRepeats && commands.length >= 2 },
+    errors: [],
+  };
+}
+
+export default function SetupForm({ form, onChange, onReview }: Props) {
+  const { config, errors } = buildConfig(form);
+
+  function patch(p: Partial<FormData>) {
+    onChange({ ...form, ...p });
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!canStart) return;
-    onStart({
-      commands,
-      minSeconds,
-      maxSeconds,
-      avoidRepeats: effectiveAvoidRepeats,
-    });
+    if (config) onReview(config);
   }
 
   return (
     <form className="setup" onSubmit={handleSubmit}>
-      <h1>Training Wheel</h1>
+      <h1>Rep Randomizer</h1>
 
-      <label>
-        Commands (comma-separated)
-        <textarea
-          value={raw}
-          onChange={(e) => setRaw(e.target.value)}
-          rows={2}
-          autoCapitalize="none"
-          autoCorrect="off"
-          spellCheck={false}
-        />
-      </label>
-
-      {commands.length > 0 && (
-        <div className="chips">{commands.length} command{commands.length === 1 ? "" : "s"}</div>
-      )}
-
-      <div className="row">
+      <div className="section section-regular">
         <label>
-          Min seconds
-          <input
-            type="number"
-            inputMode="decimal"
-            min={0.5}
-            step={0.5}
-            value={minRaw}
-            onChange={(e) => setMinRaw(e.target.value)}
+          <span className="label-row">
+            Commands <span className="hint">— comma-separated</span>
+          </span>
+          <textarea
+            value={form.commandsRaw}
+            onChange={(e) => patch({ commandsRaw: e.target.value })}
+            rows={2}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
           />
         </label>
+
+        <div className="row">
+          <label>
+            Default min seconds
+            <input
+              type="number"
+              inputMode="decimal"
+              min={0.5}
+              step={0.5}
+              value={form.defaultMinRaw}
+              onChange={(e) => patch({ defaultMinRaw: e.target.value })}
+            />
+          </label>
+          <label>
+            Default max seconds
+            <input
+              type="number"
+              inputMode="decimal"
+              min={0.5}
+              step={0.5}
+              value={form.defaultMaxRaw}
+              onChange={(e) => patch({ defaultMaxRaw: e.target.value })}
+            />
+          </label>
+        </div>
+      </div>
+
+      <div className="section section-oneoff">
         <label>
-          Max seconds
+          <span className="label-row">
+            One-offs <span className="hint">— comma-separated, fixed duration</span>
+          </span>
+          <textarea
+            value={form.oneOffsRaw}
+            onChange={(e) => patch({ oneOffsRaw: e.target.value })}
+            rows={2}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+          />
+        </label>
+
+        <label>
+          <span className="label-row">
+            One-off duration <span className="hint">— seconds, applied to every one-off</span>
+          </span>
           <input
             type="number"
             inputMode="decimal"
             min={0.5}
             step={0.5}
-            value={maxRaw}
-            onChange={(e) => setMaxRaw(e.target.value)}
+            value={form.defaultOneOffRaw}
+            onChange={(e) => patch({ defaultOneOffRaw: e.target.value })}
           />
         </label>
       </div>
 
-      <label className="checkbox">
-        <input
-          type="checkbox"
-          checked={effectiveAvoidRepeats}
-          disabled={!canAvoidRepeats}
-          onChange={(e) => setAvoidRepeats(e.target.checked)}
-        />
-        Avoid immediate repeats
-      </label>
+      <div className="section section-options">
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={form.avoidRepeats}
+            onChange={(e) => patch({ avoidRepeats: e.target.checked })}
+          />
+          Avoid immediate repeats
+          <span className="hint"> — one-offs are exempt</span>
+        </label>
+      </div>
 
       {errors.length > 0 && (
         <ul className="errors">
@@ -109,8 +169,8 @@ export default function SetupForm({ onStart }: Props) {
         </ul>
       )}
 
-      <button type="submit" className="primary" disabled={!canStart}>
-        Go
+      <button type="submit" className="primary" disabled={config === null}>
+        Review
       </button>
     </form>
   );

@@ -13,7 +13,10 @@ body,
   margin: 0;
   padding: 0;
   min-height: 100dvh;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
   font-size: 18px;
   color: #111;
   background: #fff;
@@ -43,10 +46,232 @@ h1 {
 /* Setup */
 .setup {
   width: 100%;
-  max-width: 24rem;
+  max-width: 32rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+/* ===== Setup-page sections — color-coded backgrounds only ===== */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.section-regular {
+  background: #f0fdf4;
+}
+
+.section-oneoff {
+  background: #fff7e6;
+}
+
+.section-options {
+  background: #f3f4f6;
+}
+
+/* ===== Review page ===== */
+.review {
+  width: 100%;
+  max-width: 32rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.review h1 {
+  margin: 0;
+}
+
+.review-summary {
+  margin: 0;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.oneoff-tag {
+  background: #fff7e6;
+  border: 1px solid #f59e0b;
+  color: #b45309;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* Command table — used by ReviewTable only */
+.table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.table-head {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.75rem;
+  align-items: end;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: #777;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 0 0.5rem 0.25rem;
+}
+
+.head-duration,
+.head-maxgap {
+  text-align: right;
+  padding-right: 0.4rem;
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #e4e4e4;
+  border-color: #10f0a6;
+  border-left: 4px solid #10b981;
+  border-radius: 6px;
+  background: #fcfcfc;
+  font-size: 1.05rem;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.table-row.oneoff {
+  background: #fcfcfc;
+  border-color: #f5d99c;
+  border-left-color: #f59e0b;
+}
+
+.cell-name-readonly {
+  font-weight: 500;
+}
+
+/* Duration editor: clean inline grouping of two compact number inputs. */
+.cell-duration-editor {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
+.cell-duration-editor input[type="number"] {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.3rem 0.4rem;
+  width: 3.4rem;
+  text-align: center;
+  border: 1px solid #d4d4d4;
+  border-radius: 4px;
+  background: #fff;
+  color: #222;
+}
+
+.cell-duration-editor input:focus {
+  outline: 2px solid #10b981;
+  outline-offset: -1px;
+  border-color: transparent;
+}
+
+.table-row.oneoff .cell-duration-editor input:focus {
+  outline-color: #f59e0b;
+}
+
+.cell-duration-editor .dash {
+  color: #888;
+  font-weight: 600;
+  user-select: none;
+}
+
+.cell-duration-editor .unit {
+  color: #777;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-left: 0.1rem;
+}
+
+.cell-duration-editor.oneoff-editor input[type="number"] {
+  width: 4.2rem;
+  background: #fcfcfc;
+}
+
+/* Max-gap (per-command) optional input. Empty value = no constraint. */
+.cell-maxgap-editor {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  justify-content: flex-end;
+  margin-left: 1rem;
+}
+
+.head-maxgap {
+  margin-left: 1rem;
+}
+
+.cell-maxgap-editor input[type="number"] {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.3rem 0.4rem;
+  width: 3.8rem;
+  text-align: center;
+  border: 1px dashed #c8c8c8;
+  border-radius: 4px;
+  background: transparent;
+  color: #222;
+}
+
+.cell-maxgap-editor input::placeholder {
+  color: #bbb;
+  font-weight: 400;
+}
+
+.cell-maxgap-editor input:focus {
+  outline: 2px solid #6366f1;
+  outline-offset: -1px;
+  border-style: solid;
+  border-color: transparent;
+}
+
+/* When the constraint is set, the dashed border becomes solid + indigo to
+   signal "this command has a guarantee". */
+.cell-maxgap-editor input:not(:placeholder-shown) {
+  border-style: solid;
+  border-color: #6366f1;
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.row-error {
+  grid-column: 1 / -1;
+  font-size: 0.85rem;
+  color: #b00;
+  padding-top: 0.2rem;
+}
+
+.review-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.review-controls .back {
+  flex: 0 0 auto;
+  padding: 0.75rem 1.25rem;
+}
+
+.review-controls .go {
+  flex: 1;
 }
 
 label {
@@ -87,6 +312,20 @@ input[type="number"] {
 .chips {
   font-size: 1rem;
   color: #666;
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: #888;
+  font-weight: 400;
+}
+
+.hint code {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: #f3f3f3;
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
 }
 
 .errors {
@@ -204,6 +443,30 @@ button.stop {
 }
 
 /* Narrow-phone tweaks (iPhone SE ≈ 375px). */
+@media (max-width: 480px) {
+  /* Two-row review table layout: name on top, duration + max-gap below. */
+  .table-head {
+    display: none;
+  }
+  .table-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "name  name"
+      "dur   gap";
+    row-gap: 0.4rem;
+  }
+  .table-row > .cell-name-readonly {
+    grid-area: name;
+  }
+  .table-row > .cell-duration-editor {
+    grid-area: dur;
+    justify-content: flex-start;
+  }
+  .table-row > .cell-maxgap-editor {
+    grid-area: gap;
+  }
+}
+
 @media (max-width: 400px) {
   .app {
     padding: max(0.75rem, env(safe-area-inset-top)) 0.75rem
