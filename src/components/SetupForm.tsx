@@ -57,7 +57,11 @@ export function buildConfig(form: FormData): {
   ];
 
   return {
-    config: { commands, avoidRepeats: form.avoidRepeats && commands.length >= 2 },
+    config: {
+      commands,
+      avoidRepeats: form.avoidRepeats && commands.length >= 2,
+      hideNextExercise: form.hideNextExercise,
+    },
     errors: [],
   };
 }
@@ -76,7 +80,12 @@ export default function SetupForm({ form, onChange, onReview }: Props) {
 
   return (
     <form className="setup" onSubmit={handleSubmit}>
-      <h1>Rep Randomizer</h1>
+      <h1>Disc-patch</h1>
+      <p className="tagline">
+        Your hands-free drill caller. Build a list of moves and Disc-patch
+        randomly calls them out — on screen and out loud — at random intervals,
+        so you can train footwork and reactions solo without watching a clock.
+      </p>
 
       <div className="section section-regular">
         <label>
@@ -100,7 +109,7 @@ export default function SetupForm({ form, onChange, onReview }: Props) {
               type="number"
               inputMode="decimal"
               min={0.5}
-              step={0.5}
+              step="any"
               value={form.defaultMinRaw}
               onChange={(e) => patch({ defaultMinRaw: e.target.value })}
             />
@@ -111,7 +120,7 @@ export default function SetupForm({ form, onChange, onReview }: Props) {
               type="number"
               inputMode="decimal"
               min={0.5}
-              step={0.5}
+              step="any"
               value={form.defaultMaxRaw}
               onChange={(e) => patch({ defaultMaxRaw: e.target.value })}
             />
@@ -142,7 +151,7 @@ export default function SetupForm({ form, onChange, onReview }: Props) {
             type="number"
             inputMode="decimal"
             min={0.5}
-            step={0.5}
+            step="any"
             value={form.defaultOneOffRaw}
             onChange={(e) => patch({ defaultOneOffRaw: e.target.value })}
           />
@@ -158,6 +167,14 @@ export default function SetupForm({ form, onChange, onReview }: Props) {
           />
           Avoid immediate repeats
           <span className="hint"> — one-offs are exempt</span>
+        </label>
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={form.hideNextExercise}
+            onChange={(e) => patch({ hideNextExercise: e.target.checked })}
+          />
+          Hide next exercise
         </label>
       </div>
 

@@ -78,7 +78,11 @@ export default function ReviewTable({ config, onBack, onStart }: Props) {
 
   function handleGo() {
     if (!canStart) return;
-    onStart({ commands, avoidRepeats: config.avoidRepeats });
+    onStart({
+      commands,
+      avoidRepeats: config.avoidRepeats,
+      hideNextExercise: config.hideNextExercise,
+    });
   }
 
   return (
@@ -116,7 +120,7 @@ export default function ReviewTable({ config, onBack, onStart }: Props) {
                   type="number"
                   inputMode="decimal"
                   min={0.5}
-                  step={0.5}
+                  step="any"
                   value={row.minRaw}
                   onChange={(e) => updateOneOffSeconds(i, e.target.value)}
                   aria-label={`Duration for ${row.name}`}
@@ -129,7 +133,7 @@ export default function ReviewTable({ config, onBack, onStart }: Props) {
                   type="number"
                   inputMode="decimal"
                   min={0.5}
-                  step={0.5}
+                  step="any"
                   value={row.minRaw}
                   onChange={(e) => updateRow(i, { minRaw: e.target.value })}
                   aria-label={`Min seconds for ${row.name}`}
@@ -139,7 +143,7 @@ export default function ReviewTable({ config, onBack, onStart }: Props) {
                   type="number"
                   inputMode="decimal"
                   min={0.5}
-                  step={0.5}
+                  step="any"
                   value={row.maxRaw}
                   onChange={(e) => updateRow(i, { maxRaw: e.target.value })}
                   aria-label={`Max seconds for ${row.name}`}
@@ -153,7 +157,7 @@ export default function ReviewTable({ config, onBack, onStart }: Props) {
                 type="number"
                 inputMode="decimal"
                 min={0.5}
-                step={0.5}
+                step="any"
                 value={row.maxGapRaw}
                 onChange={(e) => updateRow(i, { maxGapRaw: e.target.value })}
                 placeholder="—"

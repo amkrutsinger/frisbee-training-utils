@@ -1,4 +1,4 @@
-# Rep Randomizer
+# Disc-patch
 
 Tiny React app that calls out random commands from a list at random intervals — for solo drill practice.
 

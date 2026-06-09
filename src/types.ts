@@ -11,6 +11,7 @@ export type Command = {
 export type SessionConfig = {
   commands: Command[];
   avoidRepeats: boolean;
+  hideNextExercise: boolean;
 };
 
 export type AppState =

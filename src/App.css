@@ -43,6 +43,13 @@ h1 {
   margin: 0 0 1rem;
 }
 
+.tagline {
+  margin: -0.5rem 0 0.5rem;
+  color: #666;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
 /* Setup */
 .setup {
   width: 100%;
@@ -378,6 +385,12 @@ button.resume {
   border-color: #059669;
 }
 
+button.skip {
+  background: #3b82f6;
+  color: #fff;
+  border-color: #2563eb;
+}
+
 button.stop {
   background: #ef4444;
   color: #fff;
@@ -423,11 +436,20 @@ button.stop {
   font-weight: 700;
   line-height: 1.1;
   white-space: nowrap;
-  max-width: 100%;
+  width: 100%;
+  text-align: center;
+  /* Card around the active command so it reads as the focal element. */
+  padding: 1.5rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #f9fafb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .command.paused {
   color: #999;
+  background: #f3f4f6;
+  border-color: #e5e7eb;
 }
 
 .controls {
@@ -440,6 +462,38 @@ button.stop {
   flex: 1;
   /* Ensure both buttons stay tap-friendly even at iPhone-SE width. */
   min-width: 0;
+}
+
+/* Skip is the secondary action — narrower than Pause, sized to its content. */
+.controls .skip {
+  flex: 0 0 auto;
+}
+
+/* Next-exercise preview — subdued, sits between the command and the controls. */
+.next-up {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.5rem;
+  color: #999;
+}
+
+.next-up-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.next-up-value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #555;
+}
+
+/* End-session sits on its own row, full width, below pause/skip. */
+.end-session {
+  width: 100%;
 }
 
 /* Narrow-phone tweaks (iPhone SE ≈ 375px). */

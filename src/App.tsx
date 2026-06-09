@@ -13,15 +13,17 @@ export type FormData = {
   defaultMaxRaw: string;
   defaultOneOffRaw: string;
   avoidRepeats: boolean;
+  hideNextExercise: boolean;
 };
 
 const INITIAL_FORM: FormData = {
-  commandsRaw: "forehand, backhand, hammer, scoober",
-  oneOffsRaw: "high-five",
-  defaultMinRaw: "3",
-  defaultMaxRaw: "7",
-  defaultOneOffRaw: "1.5",
+  commandsRaw: "sprint, back pedal, shuffle left, shuffle right",
+  oneOffsRaw: "high-five, jump",
+  defaultMinRaw: "10",
+  defaultMaxRaw: "30",
+  defaultOneOffRaw: "1.2",
   avoidRepeats: false,
+  hideNextExercise: false,
 };
 
 type Phase =
